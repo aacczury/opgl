@@ -29,16 +29,13 @@ protected:
     void timerEvent( QTimerEvent * );
 
     bool fullscreen;
+
     GLfloat xRot, yRot, zRot;
-    GLfloat zoom;
-    GLfloat tilt;
-    GLfloat spin;
-    GLuint loop;
+    GLfloat hold;
     GLuint texture[1];
 
-    bool twinkle;
-
-    stars star[num];
+    float points[45][45][3];
+    int wiggle_count;
 };
 
 #endif // OPGL_H

@@ -1,4 +1,5 @@
 #include "opgl.h"
+#include <math.h>
 
 GLfloat lightAmbient[4] = { 0.5, 0.5, 0.5, 1.0 };
 GLfloat lightDiffuse[4] = { 1.0, 1.0, 1.0, 1.0 };
@@ -7,12 +8,9 @@ GLfloat lightPosition[4] = { 0.0, 0.0, 2.0, 1.0 };
 opgl::opgl( QWidget *parent, bool fs ) :
     QGLWidget( parent ){
     xRot = yRot = zRot = 0.0;
-    zoom = -15.0;
-    tilt = 90.0;
-    spin = 0.0;
-    loop = 0;
+    hold = 0.0;
 
-    twinkle = true;
+    wiggle_count = 0;
 
     fullscreen = fs;
     setGeometry( 400, 200, 800, 600 );
@@ -25,6 +23,7 @@ opgl::opgl( QWidget *parent, bool fs ) :
 
 void opgl::initializeGL(){
     loadGLTextures();
+
     glEnable( GL_TEXTURE_2D );
     glShadeModel( GL_SMOOTH );
     glClearColor( 0.0, 0.0, 0.0, 0.5 );
@@ -32,69 +31,79 @@ void opgl::initializeGL(){
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LEQUAL );
     glHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
-    glBlendFunc( GL_SRC_ALPHA, GL_ONE );
-    glEnable( GL_BLEND );
-    for ( loop = 0; loop < num; loop++ )
+    glPolygonMode( GL_BACK, GL_FILL );
+    glPolygonMode( GL_FRONT, GL_LINE );
+
+    for ( int x = 0; x < 45; x++ )
     {
-      star[loop].angle = 0.0;
-      star[loop].dist = ( float(loop)/num ) * 5.0;
-      star[loop].r = rand() % 256;
-      star[loop].g = rand() % 256;
-      star[loop].b = rand() % 256;
+      for ( int y = 0; y < 45; y++ )
+      {
+        points[x][y][0] = float( ( x/5.0 ) - 4.5 );
+        points[x][y][1] = float( ( y/5.0 ) - 4.5 );
+        points[x][y][2] = float( sin( ( ( ( x/5.0 ) * 40.0 )/360.0 ) * 3.141592654 * 2.0 ) );
+      }
     }
 }
 
 void opgl::paintGL(){
+    int x, y;
+    float float_x, float_y, float_xb, float_yb;
+
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glLoadIdentity();
+
+    glTranslatef( 0.0, 0.0, -12.0 );
+
+    glRotatef( xRot, 1.0, 0.0, 0.0 );
+    glRotatef( yRot, 0.0, 1.0, 0.0 );
+    glRotatef( zRot, 0.0, 0.0, 1.0 );
+
     glBindTexture( GL_TEXTURE_2D, texture[0] );
-    for ( loop = 0; loop < num; loop++ ){
-        glLoadIdentity();
-        glTranslatef(  0.0,  0.0, zoom );
-        glRotatef( tilt, 1.0, 0.0, 0.0 );
-        glRotatef( star[loop].angle, 0.0, 1.0, 0.0 );
-        glTranslatef( star[loop].dist, 0.0, 0.0 );
-        glRotatef( -star[loop].angle, 0.0, 1.0, 0.0 );
-        glRotatef( -tilt, 1.0, 0.0, 0.0 );
 
-        if ( twinkle )
-        {
-          glColor4ub( star[(num-loop)-1].r,
-             star[(num-loop)-1].g,
-             star[(num-loop)-1].b, 255 );
-          glBegin( GL_QUADS );
-            glTexCoord2f( 0.0, 0.0 ); glVertex3f( -1.0, -1.0, 0.0 );
-            glTexCoord2f( 1.0, 0.0 ); glVertex3f( 1.0, -1.0, 0.0 );
-            glTexCoord2f( 1.0, 1.0 ); glVertex3f( 1.0, 1.0, 0.0 );
-            glTexCoord2f( 0.0, 1.0 ); glVertex3f( -1.0, 1.0, 0.0 );
-          glEnd();
-        }
+    glBegin( GL_QUADS );
+    for ( x = 0; x < 44; x++ ){
+      for ( y = 0; y < 44; y++ ){
+        float_x = float(x)/44.0;
+        float_y = float(y)/44.0;
+        float_xb = float(x+1)/44.0;
+        float_yb = float(y+1)/44.0;
 
-        glRotatef( spin, 0.0, 0.0, 1.0 );
-        glColor4ub( star[loop].r, star[loop].g, star[loop].b, 255 );
-        glBegin( GL_QUADS );
-          glTexCoord2f( 0.0, 0.0 ); glVertex3f( -1.0, -1.0, 0.0 );
-          glTexCoord2f( 1.0, 0.0 ); glVertex3f( 1.0, -1.0, 0.0 );
-          glTexCoord2f( 1.0, 1.0 ); glVertex3f( 1.0, 1.0, 0.0 );
-          glTexCoord2f( 0.0, 1.0 ); glVertex3f( -1.0, 1.0, 0.0 );
-        glEnd();
+        glTexCoord2f( float_x, float_y );
+        glVertex3f( points[x][y][0], points[x][y][1], points[x][y][2] );
 
-        spin += 0.01;
-        star[loop].angle += float(loop)/num;
-        star[loop].dist -= 0.01;
+        glTexCoord2f( float_x, float_yb );
+        glVertex3f( points[x][y+1][0], points[x][y+1][1], points[x][y+1][2] );
 
-        if ( star[loop].dist < 0.0 )
-        {
-          star[loop].dist += 5.0;
-          star[loop].r = rand() % 256;
-          star[loop].g = rand() % 256;
-          star[loop].b = rand() % 256;
-        }
+        glTexCoord2f( float_xb, float_yb );
+        glVertex3f( points[x+1][y+1][0], points[x+1][y+1][1], points[x+1][y+1][2] );
+
+        glTexCoord2f( float_xb, float_y );
+        glVertex3f( points[x+1][y][0], points[x+1][y][1], points[x+1][y][2] );
+      }
     }
+  glEnd();
+
+  if ( wiggle_count == 2 ){
+    for ( y = 0; y < 45; y++ ){
+      hold = points[0][y][2];
+      for ( x = 0; x < 44; x++ ){
+        points[x][y][2] = points[x+1][y][2];
+      }
+      points[44][y][2] = hold;
+    }
+    wiggle_count = 0;
+  }
+  wiggle_count++;
+
+
+  xRot += 0.3;
+  yRot += 0.2;
+  zRot += 0.4;
 }
 
 void opgl::loadGLTextures(){
     QImage tex, buf;
-    if( !buf.load( "star.bmp" ) ){
+    if( !buf.load( "frozen.bmp" ) ){
         QImage dummy( 128, 128, QImage::Format_RGB888 );
         dummy.fill( Qt::green );
         buf = dummy;
@@ -104,8 +113,8 @@ void opgl::loadGLTextures(){
     glGenTextures( 1, &texture[0] );
 
     glBindTexture( GL_TEXTURE_2D, texture[0] );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
     glTexImage2D( GL_TEXTURE_2D, 0, 3, tex.width(), tex.height(), 0,
         GL_RGBA, GL_UNSIGNED_BYTE, tex.bits() );
 }
