@@ -5,6 +5,14 @@
 #include <QtOpenGL/qgl.h>
 #include <GL/glu.h>
 
+const GLuint num = 50;
+typedef struct
+{
+  int r, g, b;
+  GLfloat dist;
+  GLfloat angle;
+}stars;
+
 class opgl : public QGLWidget
 {
     Q_OBJECT
@@ -18,16 +26,19 @@ protected:
     void paintGL();
     void resizeGL(int w, int h);
     void loadGLTextures();
+    void timerEvent( QTimerEvent * );
 
     bool fullscreen;
     GLfloat xRot, yRot, zRot;
     GLfloat zoom;
-    GLfloat xSpeed, ySpeed;
-    GLuint texture[3];
-    GLuint filter;
+    GLfloat tilt;
+    GLfloat spin;
+    GLuint loop;
+    GLuint texture[1];
 
-    bool light;
-    bool blend;
+    bool twinkle;
+
+    stars star[num];
 };
 
 #endif // OPGL_H
