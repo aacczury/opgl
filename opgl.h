@@ -5,14 +5,6 @@
 #include <QtOpenGL/qgl.h>
 #include <GL/glu.h>
 
-const GLuint num = 50;
-typedef struct
-{
-  int r, g, b;
-  GLfloat dist;
-  GLfloat angle;
-}stars;
-
 class opgl : public QGLWidget
 {
     Q_OBJECT
@@ -25,16 +17,20 @@ protected:
     void initializeGL();
     void paintGL();
     void resizeGL(int w, int h);
+
     void loadGLTextures();
-    void buildLists();
 
     bool fullscreen;
 
     GLfloat xRot, yRot, zRot;
-    GLuint box, top;
-    GLuint xLoop, yLoop;
+    GLfloat zoom;
+    GLfloat xSpeed, ySpeed;
+    GLuint texture[3];
+    GLuint filter;
 
-    GLuint texture[1];
+    bool light;
+
+    GLuint fogFilter;
 };
 
 #endif // OPGL_H
