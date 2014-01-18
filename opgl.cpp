@@ -1,28 +1,42 @@
 #include "opgl.h"
 #include <math.h>
 
-GLfloat lightAmbient[4] = { 0.5, 0.5, 0.5, 1.0 };
-GLfloat lightDiffuse[4] = { 1.0, 1.0, 1.0, 1.0 };
-GLfloat lightPosition[4] = { 0.0, 0.0, 2.0, 1.0 };
+static GLfloat boxcol[5][3] =
+{
+  { 1.0, 0.0, 0.0 },
+  { 1.0, 0.5, 0.0 },
+  { 1.0, 1.0, 0.0 },
+  { 0.0, 1.0, 0.0 },
+  { 0.0, 1.0, 1.0 }
+};
+
+static GLfloat topcol[5][3] =
+{
+  { 0.5, 0.0, 0.0 },
+  { 0.5, 0.25, 0.0 },
+  { 0.5, 0.5, 0.0 },
+  { 0.0, 0.5, 0.0 },
+  { 0.0, 0.5, 0.5 }
+};
+
 
 opgl::opgl( QWidget *parent, bool fs ) :
     QGLWidget( parent ){
     xRot = yRot = zRot = 0.0;
-    hold = 0.0;
+    box = top = 0;
 
-    wiggle_count = 0;
+    xLoop = yLoop = 0;
 
     fullscreen = fs;
     setGeometry( 400, 200, 800, 600 );
 
     if( fullscreen )
         showFullScreen();
-
-    startTimer( 5 );
 }
 
 void opgl::initializeGL(){
     loadGLTextures();
+    buildLists();
 
     glEnable( GL_TEXTURE_2D );
     glShadeModel( GL_SMOOTH );
@@ -30,75 +44,29 @@ void opgl::initializeGL(){
     glClearDepth( 1.0 );
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LEQUAL );
+    glEnable( GL_LIGHT0 );
+    glEnable( GL_LIGHTING );
+    glEnable( GL_COLOR_MATERIAL );
     glHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
-    glPolygonMode( GL_BACK, GL_FILL );
-    glPolygonMode( GL_FRONT, GL_LINE );
-
-    for ( int x = 0; x < 45; x++ )
-    {
-      for ( int y = 0; y < 45; y++ )
-      {
-        points[x][y][0] = float( ( x/5.0 ) - 4.5 );
-        points[x][y][1] = float( ( y/5.0 ) - 4.5 );
-        points[x][y][2] = float( sin( ( ( ( x/5.0 ) * 40.0 )/360.0 ) * 3.141592654 * 2.0 ) );
-      }
-    }
 }
 
 void opgl::paintGL(){
-    int x, y;
-    float float_x, float_y, float_xb, float_yb;
-
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    glLoadIdentity();
-
-    glTranslatef( 0.0, 0.0, -12.0 );
-
-    glRotatef( xRot, 1.0, 0.0, 0.0 );
-    glRotatef( yRot, 0.0, 1.0, 0.0 );
-    glRotatef( zRot, 0.0, 0.0, 1.0 );
-
     glBindTexture( GL_TEXTURE_2D, texture[0] );
 
-    glBegin( GL_QUADS );
-    for ( x = 0; x < 44; x++ ){
-      for ( y = 0; y < 44; y++ ){
-        float_x = float(x)/44.0;
-        float_y = float(y)/44.0;
-        float_xb = float(x+1)/44.0;
-        float_yb = float(y+1)/44.0;
-
-        glTexCoord2f( float_x, float_y );
-        glVertex3f( points[x][y][0], points[x][y][1], points[x][y][2] );
-
-        glTexCoord2f( float_x, float_yb );
-        glVertex3f( points[x][y+1][0], points[x][y+1][1], points[x][y+1][2] );
-
-        glTexCoord2f( float_xb, float_yb );
-        glVertex3f( points[x+1][y+1][0], points[x+1][y+1][1], points[x+1][y+1][2] );
-
-        glTexCoord2f( float_xb, float_y );
-        glVertex3f( points[x+1][y][0], points[x+1][y][1], points[x+1][y][2] );
-      }
+    for ( yLoop = 1; yLoop < 6; yLoop++ ){
+        for ( xLoop = 0; xLoop < yLoop; xLoop++ ){
+            glLoadIdentity();
+            glTranslatef( 1.4 + (float(xLoop) * 2.8) - (float(yLoop) * 1.4),
+                ( (6.0 - (float(yLoop)) ) * 2.4 ) - 7.0, -20.0 );
+            glRotatef( 45.0 - (2.0 * yLoop) + xRot, 1.0, 0.0, 0.0 );
+            glRotatef( 45.0 + yRot, 0.0, 1.0, 0.0 );
+            glColor3fv( boxcol[yLoop-1] );
+            glCallList( box );
+            glColor3fv( topcol[yLoop-1] );
+            glCallList( top );
+        }
     }
-  glEnd();
-
-  if ( wiggle_count == 2 ){
-    for ( y = 0; y < 45; y++ ){
-      hold = points[0][y][2];
-      for ( x = 0; x < 44; x++ ){
-        points[x][y][2] = points[x+1][y][2];
-      }
-      points[44][y][2] = hold;
-    }
-    wiggle_count = 0;
-  }
-  wiggle_count++;
-
-
-  xRot += 0.3;
-  yRot += 0.2;
-  zRot += 0.4;
 }
 
 void opgl::loadGLTextures(){
@@ -132,8 +100,53 @@ void opgl::resizeGL(int w, int h){
     glLoadIdentity();
 }
 
-void opgl::timerEvent(QTimerEvent*){
-  updateGL();
+void opgl::buildLists(){
+    box = glGenLists( 2 );
+    glNewList( box, GL_COMPILE );
+
+    glBegin( GL_QUADS );
+    glNormal3f( 0.0, -1.0, 0.0 );
+    glTexCoord2f( 1.0, 1.0 ); glVertex3f( -1.0, -1.0, -1.0 );
+    glTexCoord2f( 0.0, 1.0 ); glVertex3f(  1.0, -1.0, -1.0 );
+    glTexCoord2f( 0.0, 0.0 ); glVertex3f(  1.0, -1.0,  1.0 );
+    glTexCoord2f( 1.0, 0.0 ); glVertex3f( -1.0, -1.0,  1.0 );
+
+    glNormal3f( 0.0, 0.0, 1.0 );
+    glTexCoord2f( 0.0, 0.0 ); glVertex3f( -1.0, -1.0,  1.0 );
+    glTexCoord2f( 1.0, 0.0 ); glVertex3f(  1.0, -1.0,  1.0 );
+    glTexCoord2f( 1.0, 1.0 ); glVertex3f(  1.0,  1.0,  1.0 );
+    glTexCoord2f( 0.0, 1.0 ); glVertex3f( -1.0,  1.0,  1.0 );
+
+    glNormal3f( 0.0, 0.0, -1.0 );
+    glTexCoord2f( 1.0, 0.0 ); glVertex3f( -1.0, -1.0, -1.0 );
+    glTexCoord2f( 1.0, 1.0 ); glVertex3f( -1.0,  1.0, -1.0 );
+    glTexCoord2f( 0.0, 1.0 ); glVertex3f(  1.0,  1.0, -1.0 );
+    glTexCoord2f( 0.0, 0.0 ); glVertex3f(  1.0, -1.0, -1.0 );
+
+    glNormal3f( 1.0, 0.0, 0.0 );
+    glTexCoord2f( 1.0, 0.0 ); glVertex3f(  1.0, -1.0, -1.0 );
+    glTexCoord2f( 1.0, 1.0 ); glVertex3f(  1.0,  1.0, -1.0 );
+    glTexCoord2f( 0.0, 1.0 ); glVertex3f(  1.0,  1.0,  1.0 );
+    glTexCoord2f( 0.0, 0.0 ); glVertex3f(  1.0, -1.0,  1.0 );
+
+    glNormal3f( -1.0, 0.0, 0.0 );
+    glTexCoord2f( 0.0, 0.0 ); glVertex3f( -1.0, -1.0, -1.0 );
+    glTexCoord2f( 1.0, 0.0 ); glVertex3f( -1.0, -1.0,  1.0 );
+    glTexCoord2f( 1.0, 1.0 ); glVertex3f( -1.0,  1.0,  1.0 );
+    glTexCoord2f( 0.0, 1.0 ); glVertex3f( -1.0,  1.0, -1.0 );
+    glEnd();
+    glEndList();
+
+    top = box + 1;
+    glNewList( top, GL_COMPILE );
+    glBegin( GL_QUADS );
+    glNormal3f( 0.0, 1.0, 0.0 );
+    glTexCoord2f( 0.0, 1.0 ); glVertex3f( -1.0,  1.0, -1.0 );
+    glTexCoord2f( 0.0, 0.0 ); glVertex3f( -1.0,  1.0,  1.0 );
+    glTexCoord2f( 1.0, 0.0 ); glVertex3f(  1.0,  1.0,  1.0 );
+    glTexCoord2f( 1.0, 1.0 ); glVertex3f(  1.0,  1.0, -1.0 );
+    glEnd();
+    glEndList();
 }
 
 opgl::~opgl(){

@@ -26,16 +26,15 @@ protected:
     void paintGL();
     void resizeGL(int w, int h);
     void loadGLTextures();
-    void timerEvent( QTimerEvent * );
+    void buildLists();
 
     bool fullscreen;
 
     GLfloat xRot, yRot, zRot;
-    GLfloat hold;
-    GLuint texture[1];
+    GLuint box, top;
+    GLuint xLoop, yLoop;
 
-    float points[45][45][3];
-    int wiggle_count;
+    GLuint texture[1];
 };
 
 #endif // OPGL_H
