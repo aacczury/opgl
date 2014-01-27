@@ -13,37 +13,53 @@ float points[] = {
   -0.5f, -0.5f,  0.0f
 };
 
+float colours[] = {
+  1.0f, 0.0f,  0.0f,
+  0.0f, 1.0f,  0.0f,
+  0.0f, 0.0f,  1.0f
+};
+
 void opgl::initializeGL()
 {
-    initializeGLFunctions();
-    glGenBuffers (1, &vbo);
-    glBindBuffer (GL_ARRAY_BUFFER, vbo);
+    initializeGLFunctions();// important
+
+    glGenBuffers (1, &points_vbo);
+    glBindBuffer (GL_ARRAY_BUFFER, points_vbo);
     glBufferData (GL_ARRAY_BUFFER, 3 * 3 * sizeof (float), points, GL_STATIC_DRAW);
+    glBindBuffer (GL_ARRAY_BUFFER, 0);
+
+    glGenBuffers (1, &colours_vbo);
+    glBindBuffer (GL_ARRAY_BUFFER, colours_vbo);
+    glBufferData (GL_ARRAY_BUFFER, 3 * 3 * sizeof (float), colours, GL_STATIC_DRAW);
+    glBindBuffer (GL_ARRAY_BUFFER, 0);
 
     QGLShader *vshader = new QGLShader(QGLShader::Vertex, this);
     const char *vsrc =
-        "#version 400\n"
+        "layout(location = 0) in vec3 vertex_position;"
+        "layout(location = 1) in vec3 vertex_colour;"
 
-        "in vec3 vp;\n"
+        "out vec3 colour;"
 
-        "void main () {\n"
-          "gl_Position = vec4 (vp, 1.0);\n"
-        "}\n";
+        "void main () {"
+            "colour = vertex_colour;"
+            "gl_Position = vec4 (vertex_position, 1.0);"
+        "}";
     vshader->compileSourceCode(vsrc); //glShaderSource && glCompileShader
 
     QGLShader *fshader = new QGLShader(QGLShader::Fragment, this);
     const char *fsrc =
-        "#version 400\n"
-
+        "in vec3 colour;"
         "out vec4 frag_colour;\n"
 
         "void main () {\n"
-          "frag_colour = vec4 (0.5, 0.0, 0.5, 1.0);\n"
+          "frag_colour = vec4 (colour, 1.0);\n"
         "}\n";
     fshader->compileSourceCode(fsrc);//glShaderSource && glCompileShader
 
     shader_programme.addShader(vshader); //glAttachShader
     shader_programme.addShader(fshader); //glAttachShader
+    shader_programme.bindAttributeLocation("vertex_position", 0);
+    shader_programme.bindAttributeLocation("vertex_colour", 1);
     shader_programme.link(); //glLinkProgram*/
 }
 
@@ -54,13 +70,18 @@ void opgl::paintGL(){
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     shader_programme.bind();
 
-    glBindBuffer (GL_ARRAY_BUFFER, vbo);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, 0, 0);
+    glBindBuffer (GL_ARRAY_BUFFER, points_vbo);
+    glVertexAttribPointer(shader_programme.attributeLocation("vertex_position"), 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(shader_programme.attributeLocation("vertex_position"));
+
+    glBindBuffer (GL_ARRAY_BUFFER, colours_vbo);
+    glVertexAttribPointer(shader_programme.attributeLocation("vertex_colour"), 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(shader_programme.attributeLocation("vertex_colour"));
 
     glDrawArrays (GL_TRIANGLES, 0, 3);
 
-    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableVertexAttribArray(shader_programme.attributeLocation("vertex_position"));
+    glDisableVertexAttribArray(shader_programme.attributeLocation("vertex_colour"));
 }
 
 GLenum cubesides[6] = { // faces of cube texture

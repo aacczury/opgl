@@ -29,7 +29,8 @@ private:
     void loadCubeTexture();
     void drawTriangle(const QVector<QVector4D> &colors);
 
-    unsigned int vbo;
+    unsigned int points_vbo;
+    unsigned int colours_vbo;
 
     QGLShaderProgram shader_programme;
     int mModelHandle;
