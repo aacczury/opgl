@@ -33,16 +33,23 @@ void opgl::initializeGL()
     glBufferData (GL_ARRAY_BUFFER, 3 * 3 * sizeof (float), colours, GL_STATIC_DRAW);
     glBindBuffer (GL_ARRAY_BUFFER, 0);
 
+    viewMatrix.setRow(0, QVector4D(1.0f, 0.0f, 0.0f, 0.5f)); // x + 0.5
+    viewMatrix.setRow(1, QVector4D(0.0f, 1.0f, 0.0f, 0.0f));
+    viewMatrix.setRow(2, QVector4D(0.0f, 0.0f, 1.0f, 0.0f));
+    viewMatrix.setRow(3, QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+
     QGLShader *vshader = new QGLShader(QGLShader::Vertex, this);
     const char *vsrc =
         "layout(location = 0) in vec3 vertex_position;"
         "layout(location = 1) in vec3 vertex_colour;"
 
+        "uniform mat4 matrix;"
+
         "out vec3 colour;"
 
         "void main () {"
             "colour = vertex_colour;"
-            "gl_Position = vec4 (vertex_position, 1.0);"
+            "gl_Position = matrix * vec4 (vertex_position, 1.0);"
         "}";
     vshader->compileSourceCode(vsrc); //glShaderSource && glCompileShader
 
@@ -58,7 +65,7 @@ void opgl::initializeGL()
 
     shader_programme.addShader(vshader); //glAttachShader
     shader_programme.addShader(fshader); //glAttachShader
-    shader_programme.bindAttributeLocation("vertex_position", 0);
+    shader_programme.bindAttributeLocation("vertex_position", 0); //沒有好像也沒差
     shader_programme.bindAttributeLocation("vertex_colour", 1);
     shader_programme.link(); //glLinkProgram*/
 }
@@ -77,6 +84,8 @@ void opgl::paintGL(){
     glBindBuffer (GL_ARRAY_BUFFER, colours_vbo);
     glVertexAttribPointer(shader_programme.attributeLocation("vertex_colour"), 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(shader_programme.attributeLocation("vertex_colour"));
+
+    shader_programme.setUniformValue(shader_programme.uniformLocation("matrix"), viewMatrix);
 
     glDrawArrays (GL_TRIANGLES, 0, 3);
 

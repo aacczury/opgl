@@ -33,14 +33,7 @@ private:
     unsigned int colours_vbo;
 
     QGLShaderProgram shader_programme;
-    int mModelHandle;
-    int mViewProjHandle;
-    int mCameraHandle;
-    int mWorldHandle;
-
-    QMatrix4x4 mModelMatrix; //模型矩陣
-    QMatrix4x4 mViewProjMatrix; //視圖投影矩陣
-    QVector3D mCameraV3; //相機位置
+    QMatrix4x4 viewMatrix;
 
     GLuint tex_cube;
 };
