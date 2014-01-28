@@ -13,6 +13,8 @@
 #include <QMatrix4x4>
 #include <QTime>
 #include <QTimer>
+#include <iostream>
+using namespace std;
 
 class opgl : public QGLWidget, protected QGLFunctions
 {
@@ -30,10 +32,14 @@ private:
     void drawTriangle(const QVector<QVector4D> &colors);
 
     unsigned int points_vbo;
+    unsigned int v_vbo;
+    unsigned int vn_vbo;
     unsigned int colours_vbo;
 
     QGLShaderProgram shader_programme;
+    QMatrix4x4 projMatrix;
     QMatrix4x4 viewMatrix;
+    QMatrix4x4 modelMatrix;
 
     GLuint tex_cube;
 };

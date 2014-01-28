@@ -8,65 +8,99 @@ opgl::opgl(QGLWidget *parent) :
 }
 
 float points[] = {
-   0.0f,  0.5f,  0.0f,
-   0.5f, -0.5f,  0.0f,
-  -0.5f, -0.5f,  0.0f
-};
+    -1.0f,  1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
 
-float colours[] = {
-  1.0f, 0.0f,  0.0f,
-  0.0f, 1.0f,  0.0f,
-  0.0f, 0.0f,  1.0f
+    -1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f
+
 };
 
 void opgl::initializeGL()
 {
     initializeGLFunctions();// important
 
+    glEnable(GL_TEXTURE_CUBE_MAP);
+    loadCubeTexture();
+
     glGenBuffers (1, &points_vbo);
     glBindBuffer (GL_ARRAY_BUFFER, points_vbo);
-    glBufferData (GL_ARRAY_BUFFER, 3 * 3 * sizeof (float), points, GL_STATIC_DRAW);
+    glBufferData (GL_ARRAY_BUFFER, 3 * 36 * sizeof (float), points, GL_STATIC_DRAW);
     glBindBuffer (GL_ARRAY_BUFFER, 0);
 
-    glGenBuffers (1, &colours_vbo);
-    glBindBuffer (GL_ARRAY_BUFFER, colours_vbo);
-    glBufferData (GL_ARRAY_BUFFER, 3 * 3 * sizeof (float), colours, GL_STATIC_DRAW);
-    glBindBuffer (GL_ARRAY_BUFFER, 0);
+    projMatrix.setRow(0, QVector4D(0.5f, 0.0f, 0.0f, 0.0f));  // 1/r
+    projMatrix.setRow(1, QVector4D(0.0f, 0.5f, 0.0f, 0.0f));  // 1/t
+    projMatrix.setRow(2, QVector4D(0.0f, 0.0f, 1.0f, 0.0f));  // -2/(f-n) // -(f+n)/(f-n)
+    projMatrix.setRow(3, QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
 
     viewMatrix.setRow(0, QVector4D(1.0f, 0.0f, 0.0f, 0.5f)); // x + 0.5
     viewMatrix.setRow(1, QVector4D(0.0f, 1.0f, 0.0f, 0.0f));
     viewMatrix.setRow(2, QVector4D(0.0f, 0.0f, 1.0f, 0.0f));
     viewMatrix.setRow(3, QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
 
+
     QGLShader *vshader = new QGLShader(QGLShader::Vertex, this);
     const char *vsrc =
-        "layout(location = 0) in vec3 vertex_position;"
-        "layout(location = 1) in vec3 vertex_colour;"
+        "in vec3 vp;"
 
-        "uniform mat4 matrix;"
-
-        "out vec3 colour;"
+        "uniform mat4 proj, view;"
+        "out vec3 texcoords;"
 
         "void main () {"
-            "colour = vertex_colour;"
-            "gl_Position = matrix * vec4 (vertex_position, 1.0);"
+            "texcoords = vp;"
+            "gl_Position = proj * view * vec4 (vp, 1.0);"
         "}";
     vshader->compileSourceCode(vsrc); //glShaderSource && glCompileShader
 
     QGLShader *fshader = new QGLShader(QGLShader::Fragment, this);
     const char *fsrc =
-        "in vec3 colour;"
-        "out vec4 frag_colour;\n"
+        "in vec3 texcoords;"
+        "uniform samplerCube cube_texture;"
+        "out vec4 frag_colour;"
 
-        "void main () {\n"
-          "frag_colour = vec4 (colour, 1.0);\n"
-        "}\n";
+        "void main () {"
+            "frag_colour = texture (cube_texture, texcoords);"
+        "}";
     fshader->compileSourceCode(fsrc);//glShaderSource && glCompileShader
 
     shader_programme.addShader(vshader); //glAttachShader
     shader_programme.addShader(fshader); //glAttachShader
-    shader_programme.bindAttributeLocation("vertex_position", 0); //沒有好像也沒差
-    shader_programme.bindAttributeLocation("vertex_colour", 1);
     shader_programme.link(); //glLinkProgram*/
 }
 
@@ -74,23 +108,24 @@ void opgl::resizeGL(int w, int h){
 }
 
 void opgl::paintGL(){
-    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDepthMask (GL_FALSE);
     shader_programme.bind();
 
+    glActiveTexture (GL_TEXTURE0);
+    glBindTexture (GL_TEXTURE_CUBE_MAP, tex_cube);
+
     glBindBuffer (GL_ARRAY_BUFFER, points_vbo);
-    glVertexAttribPointer(shader_programme.attributeLocation("vertex_position"), 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(shader_programme.attributeLocation("vertex_position"));
+    glVertexAttribPointer(shader_programme.attributeLocation("vp"), 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(shader_programme.attributeLocation("vp"));
 
-    glBindBuffer (GL_ARRAY_BUFFER, colours_vbo);
-    glVertexAttribPointer(shader_programme.attributeLocation("vertex_colour"), 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(shader_programme.attributeLocation("vertex_colour"));
+    shader_programme.setUniformValue(shader_programme.uniformLocation("proj"), projMatrix);
+    shader_programme.setUniformValue(shader_programme.uniformLocation("view"), viewMatrix);
 
-    shader_programme.setUniformValue(shader_programme.uniformLocation("matrix"), viewMatrix);
+    glDrawArrays (GL_TRIANGLES, 0, 36);
 
-    glDrawArrays (GL_TRIANGLES, 0, 3);
+    glDisableVertexAttribArray(shader_programme.attributeLocation("vp"));
 
-    glDisableVertexAttribArray(shader_programme.attributeLocation("vertex_position"));
-    glDisableVertexAttribArray(shader_programme.attributeLocation("vertex_colour"));
+    glDepthMask (GL_TRUE);
 }
 
 GLenum cubesides[6] = { // faces of cube texture
