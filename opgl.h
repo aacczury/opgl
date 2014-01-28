@@ -2,10 +2,13 @@
 #define OPGL_H
 
 #include <QMainWindow>
-#include <QtOpenGL/qgl.h>
+#include <QtOpenGL>
+#include <QGLFunctions>
 #include <GL/glu.h>
+#include <iostream>
+using namespace std;
 
-class opgl : public QGLWidget
+class opgl : public QGLWidget, protected QGLFunctions
 {
     Q_OBJECT
 
@@ -18,6 +21,7 @@ protected:
     void paintGL();
     void resizeGL(int w, int h);
 
+    void loadCubeTexture();
     void loadGLTextures();
 
     bool fullscreen;
@@ -25,7 +29,7 @@ protected:
     GLfloat xRot, yRot, zRot;
     GLfloat zoom;
     GLfloat xSpeed, ySpeed;
-    GLuint texture[3];
+    GLuint texture, ctex;
     GLuint filter;
 
     bool light;
